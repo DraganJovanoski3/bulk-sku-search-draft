@@ -1,0 +1,123 @@
+.bssd-wrap {
+	max-width: 1200px;
+}
+
+.bssd-search-form {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	padding: 20px;
+	margin: 20px 0;
+}
+
+.bssd-search-form .form-table th {
+	width: 160px;
+	vertical-align: top;
+	padding-top: 16px;
+}
+
+.bssd-search-form textarea {
+	font-family: Consolas, Monaco, monospace;
+}
+
+.bssd-summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin: 20px 0;
+}
+
+.bssd-summary-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-left-width: 4px;
+	padding: 16px 20px;
+	min-width: 150px;
+}
+
+.bssd-summary-card--total {
+	border-left-color: #2271b1;
+}
+
+.bssd-summary-card--found {
+	border-left-color: #00a32a;
+}
+
+.bssd-summary-card--missing {
+	border-left-color: #d63638;
+}
+
+.bssd-summary-card--draftable {
+	border-left-color: #b32d2e;
+}
+
+.bssd-summary-card--draft {
+	border-left-color: #dba617;
+}
+
+.bssd-summary-card--other {
+	border-left-color: #8c8f94;
+}
+
+.bssd-summary-card strong {
+	display: block;
+	font-size: 24px;
+	line-height: 1.2;
+	margin-top: 4px;
+}
+
+.bssd-actions {
+	margin: 16px 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.bssd-draft-progress {
+	color: #50575e;
+}
+
+.bssd-draft-progress.is-busy {
+	font-weight: 600;
+}
+
+.bssd-view-tabs {
+	margin-bottom: 0;
+}
+
+.bssd-results-table {
+	margin-top: 0;
+}
+
+.bssd-pagination {
+	margin-top: 12px;
+}
+
+.bssd-notice-inline {
+	margin: 12px 0;
+}
+
+.bssd-status {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: capitalize;
+}
+
+.bssd-status--publish {
+	background: #d5f5e3;
+	color: #1e4620;
+}
+
+.bssd-status--draft {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.bssd-status--pending,
+.bssd-status--private {
+	background: #fcf3cf;
+	color: #6d4c00;
+}
