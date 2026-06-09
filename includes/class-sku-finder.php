@@ -56,13 +56,17 @@ class BSSD_SKU_Finder {
 			}
 
 			$product_id = (int) $row['ID'];
+			$product    = wc_get_product( $product_id );
+			$view_link  = $product ? $product->get_permalink() : get_permalink( $product_id );
+
 			$matches_by_normalized[ $normalized ][] = array(
-				'product_id'  => $product_id,
-				'sku'         => (string) $row['sku'],
-				'title'       => (string) $row['post_title'],
-				'status'      => (string) $row['post_status'],
-				'post_type'   => (string) $row['post_type'],
-				'edit_link'   => get_edit_post_link( $product_id, 'raw' ),
+				'product_id'   => $product_id,
+				'sku'          => (string) $row['sku'],
+				'title'        => (string) $row['post_title'],
+				'status'       => (string) $row['post_status'],
+				'post_type'    => (string) $row['post_type'],
+				'edit_link'    => get_edit_post_link( $product_id, 'raw' ),
+				'view_link'    => $view_link ? (string) $view_link : '',
 				'is_draftable' => 'publish' === $row['post_status'],
 			);
 		}

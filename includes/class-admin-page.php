@@ -10,6 +10,7 @@ class BSSD_Admin_Page {
 	const PAGE_SLUG        = 'bulk-sku-search-draft';
 	const NONCE_SEARCH     = 'bssd_search_skus';
 	const NONCE_DRAFT      = 'bssd_draft_products';
+	const NONCE_SKU        = 'bssd_update_sku';
 	const PER_PAGE         = 50;
 
 	/**
@@ -32,6 +33,7 @@ class BSSD_Admin_Page {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_bssd_draft_batch', array( $this, 'ajax_draft_batch' ) );
+		add_action( 'wp_ajax_bssd_update_sku', array( $this, 'ajax_update_sku' ) );
 	}
 
 	/**
@@ -79,12 +81,19 @@ class BSSD_Admin_Page {
 			array(
 				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
 				'nonce'     => wp_create_nonce( self::NONCE_DRAFT ),
+				'skuNonce'  => wp_create_nonce( self::NONCE_SKU ),
 				'batchSize' => (int) BSSD_BATCH_SIZE,
 				'i18n'      => array(
 					'confirmDraft' => __( 'This will set %d published product(s) to draft. Continue?', 'bulk-sku-search-draft' ),
 					'drafting'     => __( 'Setting products to draft…', 'bulk-sku-search-draft' ),
 					'complete'     => __( 'Draft update complete.', 'bulk-sku-search-draft' ),
 					'error'        => __( 'An error occurred. Please try again.', 'bulk-sku-search-draft' ),
+					'editSku'      => __( 'Edit SKU', 'bulk-sku-search-draft' ),
+					'saveSku'      => __( 'Save', 'bulk-sku-search-draft' ),
+					'cancelSku'    => __( 'Cancel', 'bulk-sku-search-draft' ),
+					'savingSku'    => __( 'Saving…', 'bulk-sku-search-draft' ),
+					'skuSaved'     => __( 'SKU saved.', 'bulk-sku-search-draft' ),
+					'skuFailed'    => __( 'Could not save SKU.', 'bulk-sku-search-draft' ),
 				),
 			)
 		);
@@ -142,6 +151,44 @@ class BSSD_Admin_Page {
 				'failed'    => (int) $result['failed'],
 				'skipped'   => (int) $result['skipped'],
 				'errors'    => array_slice( $result['errors'], 0, 10 ),
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler: update a product SKU inline.
+	 */
+	public function ajax_update_sku() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'bulk-sku-search-draft' ) ),
+				403
+			);
+		}
+
+		check_ajax_referer( self::NONCE_SKU, 'nonce' );
+
+		$product_id = absint( $_POST['product_id'] ?? 0 );
+		$new_sku    = isset( $_POST['sku'] ) ? wp_unslash( $_POST['sku'] ) : '';
+
+		$result = BSSD_SKU_Updater::update( $product_id, $new_sku );
+
+		if ( ! $result['success'] ) {
+			wp_send_json_error(
+				array(
+					'message' => $result['message'],
+					'sku'     => $result['sku'],
+				),
+				400
+			);
+		}
+
+		BSSD_SKU_Updater::update_cached_results( $product_id, $result['sku'] );
+
+		wp_send_json_success(
+			array(
+				'message' => $result['message'],
+				'sku'     => $result['sku'],
 			)
 		);
 	}
@@ -390,7 +437,7 @@ class BSSD_Admin_Page {
 								<th><?php esc_html_e( 'Product Name', 'bulk-sku-search-draft' ); ?></th>
 								<th><?php esc_html_e( 'Status', 'bulk-sku-search-draft' ); ?></th>
 								<th><?php esc_html_e( 'Type', 'bulk-sku-search-draft' ); ?></th>
-								<th><?php esc_html_e( 'Edit', 'bulk-sku-search-draft' ); ?></th>
+								<th><?php esc_html_e( 'Actions', 'bulk-sku-search-draft' ); ?></th>
 							<?php else : ?>
 								<th><?php esc_html_e( 'SKU', 'bulk-sku-search-draft' ); ?></th>
 							<?php endif; ?>
@@ -405,19 +452,63 @@ class BSSD_Admin_Page {
 							<?php endforeach; ?>
 						<?php else : ?>
 							<?php foreach ( $page_rows as $row ) : ?>
-								<tr>
-									<td><?php echo esc_html( $row['sku'] ?? $row['input_sku'] ?? '' ); ?></td>
-									<td><?php echo esc_html( $row['title'] ?? '' ); ?></td>
+								<?php
+								$product_id = (int) ( $row['product_id'] ?? 0 );
+								$sku_value  = (string) ( $row['sku'] ?? $row['input_sku'] ?? '' );
+								?>
+								<tr data-product-id="<?php echo esc_attr( (string) $product_id ); ?>">
+									<td class="bssd-sku-cell">
+										<div class="bssd-sku-display">
+											<code class="bssd-sku-value"><?php echo esc_html( $sku_value ); ?></code>
+											<button type="button" class="button button-small bssd-sku-edit-btn" title="<?php esc_attr_e( 'Edit SKU', 'bulk-sku-search-draft' ); ?>">
+												<?php esc_html_e( 'Edit SKU', 'bulk-sku-search-draft' ); ?>
+											</button>
+										</div>
+										<div class="bssd-sku-editor" hidden>
+											<input
+												type="text"
+												class="bssd-sku-input regular-text"
+												value="<?php echo esc_attr( $sku_value ); ?>"
+												maxlength="100"
+											/>
+											<div class="bssd-sku-editor-actions">
+												<button type="button" class="button button-primary button-small bssd-sku-save-btn">
+													<?php esc_html_e( 'Save', 'bulk-sku-search-draft' ); ?>
+												</button>
+												<button type="button" class="button button-small bssd-sku-cancel-btn">
+													<?php esc_html_e( 'Cancel', 'bulk-sku-search-draft' ); ?>
+												</button>
+												<span class="bssd-sku-feedback" aria-live="polite"></span>
+											</div>
+										</div>
+									</td>
+									<td>
+										<?php if ( ! empty( $row['edit_link'] ) ) : ?>
+											<a href="<?php echo esc_url( $row['edit_link'] ); ?>" target="_blank" rel="noopener noreferrer">
+												<?php echo esc_html( $row['title'] ?? '' ); ?>
+											</a>
+										<?php else : ?>
+											<?php echo esc_html( $row['title'] ?? '' ); ?>
+										<?php endif; ?>
+									</td>
 									<td>
 										<span class="bssd-status bssd-status--<?php echo esc_attr( sanitize_html_class( $row['status'] ?? 'unknown' ) ); ?>">
 											<?php echo esc_html( ucfirst( (string) ( $row['status'] ?? '' ) ) ); ?>
 										</span>
 									</td>
 									<td><?php echo esc_html( $this->format_post_type( $row['post_type'] ?? '' ) ); ?></td>
-									<td>
+									<td class="bssd-actions-cell">
+										<?php if ( ! empty( $row['view_link'] ) ) : ?>
+											<a href="<?php echo esc_url( $row['view_link'] ); ?>" class="bssd-quick-link" target="_blank" rel="noopener noreferrer">
+												<?php esc_html_e( 'View', 'bulk-sku-search-draft' ); ?>
+											</a>
+										<?php endif; ?>
 										<?php if ( ! empty( $row['edit_link'] ) ) : ?>
-											<a href="<?php echo esc_url( $row['edit_link'] ); ?>"><?php esc_html_e( 'Edit', 'bulk-sku-search-draft' ); ?></a>
-										<?php else : ?>
+											<a href="<?php echo esc_url( $row['edit_link'] ); ?>" class="bssd-quick-link" target="_blank" rel="noopener noreferrer">
+												<?php esc_html_e( 'Edit', 'bulk-sku-search-draft' ); ?>
+											</a>
+										<?php endif; ?>
+										<?php if ( empty( $row['view_link'] ) && empty( $row['edit_link'] ) ) : ?>
 											&mdash;
 										<?php endif; ?>
 									</td>

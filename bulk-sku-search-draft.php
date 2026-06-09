@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Bulk SKU Search & Draft
  * Description: Search WooCommerce products by up to 500 SKUs at once and bulk-set published matches to draft.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Dragan Jovanoski
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BSSD_VERSION', '1.0.0' );
+define( 'BSSD_VERSION', '1.1.0' );
 define( 'BSSD_PLUGIN_FILE', __FILE__ );
 define( 'BSSD_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BSSD_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -23,6 +23,7 @@ define( 'BSSD_TRANSIENT_KEY', 'bssd_search_results' );
 require_once BSSD_PLUGIN_DIR . 'includes/class-sku-parser.php';
 require_once BSSD_PLUGIN_DIR . 'includes/class-sku-finder.php';
 require_once BSSD_PLUGIN_DIR . 'includes/class-draft-processor.php';
+require_once BSSD_PLUGIN_DIR . 'includes/class-sku-updater.php';
 require_once BSSD_PLUGIN_DIR . 'includes/class-admin-page.php';
 
 /**

@@ -79,7 +79,73 @@
 			});
 	}
 
-	$(function () {
+	function showSkuEditor($cell) {
+		$cell.find('.bssd-sku-display').attr('hidden', true);
+		$cell.find('.bssd-sku-editor').removeAttr('hidden');
+		$cell.find('.bssd-sku-input').trigger('focus').select();
+		$cell.find('.bssd-sku-feedback').text('');
+	}
+
+	function hideSkuEditor($cell, sku) {
+		if (typeof sku === 'string') {
+			$cell.find('.bssd-sku-value').text(sku);
+			$cell.find('.bssd-sku-input').val(sku);
+		}
+
+		$cell.find('.bssd-sku-editor').attr('hidden', true);
+		$cell.find('.bssd-sku-display').removeAttr('hidden');
+		$cell.find('.bssd-sku-feedback').text('');
+	}
+
+	function setSkuFeedback($cell, message, isError) {
+		var $feedback = $cell.find('.bssd-sku-feedback');
+		$feedback.text(message);
+		$feedback.toggleClass('is-error', !!isError);
+	}
+
+	function saveSku($row) {
+		var $cell = $row.find('.bssd-sku-cell');
+		var $input = $cell.find('.bssd-sku-input');
+		var $saveBtn = $cell.find('.bssd-sku-save-btn');
+		var productId = parseInt($row.data('product-id'), 10) || 0;
+		var newSku = $.trim($input.val());
+
+		if (!productId) {
+			return;
+		}
+
+		$saveBtn.prop('disabled', true);
+		setSkuFeedback($cell, bssdAdmin.i18n.savingSku, false);
+
+		$.post(bssdAdmin.ajaxUrl, {
+			action: 'bssd_update_sku',
+			nonce: bssdAdmin.skuNonce,
+			product_id: productId,
+			sku: newSku,
+		})
+			.done(function (response) {
+				if (!response || !response.success || !response.data) {
+					var errMsg =
+						(response && response.data && response.data.message) ||
+						bssdAdmin.i18n.skuFailed;
+					setSkuFeedback($cell, errMsg, true);
+					$saveBtn.prop('disabled', false);
+					return;
+				}
+
+				hideSkuEditor($cell, response.data.sku || newSku);
+			})
+			.fail(function (xhr) {
+				var errMsg = bssdAdmin.i18n.skuFailed;
+				if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+					errMsg = xhr.responseJSON.data.message;
+				}
+				setSkuFeedback($cell, errMsg, true);
+				$saveBtn.prop('disabled', false);
+			});
+	}
+
+	function initDraftButton() {
 		var $btn = $('#bssd-draft-btn');
 		var $progress = $('#bssd-draft-progress');
 
@@ -104,5 +170,45 @@
 			$progress.addClass('is-busy').text(bssdAdmin.i18n.drafting);
 			runBatch($btn, $progress, 0, count);
 		});
+	}
+
+	function initSkuEditors() {
+		var $table = $('.bssd-results-table');
+
+		if (!$table.length) {
+			return;
+		}
+
+		$table.on('click', '.bssd-sku-edit-btn', function () {
+			showSkuEditor($(this).closest('.bssd-sku-cell'));
+		});
+
+		$table.on('click', '.bssd-sku-cancel-btn', function () {
+			var $cell = $(this).closest('.bssd-sku-cell');
+			var originalSku = $.trim($cell.find('.bssd-sku-value').text());
+			hideSkuEditor($cell, originalSku);
+		});
+
+		$table.on('click', '.bssd-sku-save-btn', function () {
+			saveSku($(this).closest('tr'));
+		});
+
+		$table.on('keydown', '.bssd-sku-input', function (event) {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				saveSku($(this).closest('tr'));
+			}
+
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				var $cell = $(this).closest('.bssd-sku-cell');
+				hideSkuEditor($cell, $.trim($cell.find('.bssd-sku-value').text()));
+			}
+		});
+	}
+
+	$(function () {
+		initDraftButton();
+		initSkuEditors();
 	});
 })(jQuery);
